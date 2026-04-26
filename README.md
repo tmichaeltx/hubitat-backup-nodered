@@ -67,6 +67,8 @@ Open the `hubitat-maintenance` tab **Properties** (double-click the tab) and fil
 
 If you have fewer than 3 hubs, set `HUB_COUNT` to the actual number. The unused hub variables are ignored.
 
+If you have more than 3 hubs, Groups A and B will handle them automatically — just add the additional `HUB_4_NAME` / `HUB_4_ADDR` / etc. env vars and increment `HUB_COUNT`. Group C, however, has one inject node hardcoded per hub. For a 4th hub you would need to duplicate one of the existing inject+function pairs in the editor and update the label to match your 4th hub's name.
+
 ---
 
 ## Groups
