@@ -1,0 +1,1318 @@
+[
+  {
+    "type": "tab",
+    "label": "hubitat-maintenance",
+    "id": "176e3b7c8c773818",
+    "info": "Hubitat backup, update check, and update apply \u2014 script-free NR implementation.",
+    "disabled": false,
+    "env": [
+      {
+        "name": "HUB_COUNT",
+        "value": "3",
+        "type": "num"
+      },
+      {
+        "name": "HUB_1_NAME",
+        "value": "Hub One",
+        "type": "str"
+      },
+      {
+        "name": "HUB_1_ADDR",
+        "value": "hubitat-hub-1.local",
+        "type": "str"
+      },
+      {
+        "name": "HUB_1_USER",
+        "value": "your-username",
+        "type": "str"
+      },
+      {
+        "name": "HUB_1_PASS",
+        "value": "your-password",
+        "type": "str"
+      },
+      {
+        "name": "HUB_2_NAME",
+        "value": "Hub Two",
+        "type": "str"
+      },
+      {
+        "name": "HUB_2_ADDR",
+        "value": "hubitat-hub-2.local",
+        "type": "str"
+      },
+      {
+        "name": "HUB_2_USER",
+        "value": "your-username",
+        "type": "str"
+      },
+      {
+        "name": "HUB_2_PASS",
+        "value": "your-password",
+        "type": "str"
+      },
+      {
+        "name": "HUB_3_NAME",
+        "value": "Hub Three",
+        "type": "str"
+      },
+      {
+        "name": "HUB_3_ADDR",
+        "value": "hubitat-hub-3.local",
+        "type": "str"
+      },
+      {
+        "name": "HUB_3_USER",
+        "value": "your-username",
+        "type": "str"
+      },
+      {
+        "name": "HUB_3_PASS",
+        "value": "your-password",
+        "type": "str"
+      },
+      {
+        "name": "BACKUP_PATH",
+        "value": "/backup",
+        "type": "str"
+      },
+      {
+        "name": "RETAIN_T1",
+        "value": "3",
+        "type": "num"
+      },
+      {
+        "name": "RETAIN_T2",
+        "value": "3",
+        "type": "num"
+      },
+      {
+        "name": "RETAIN_T3",
+        "value": "3",
+        "type": "num"
+      },
+      {
+        "name": "RETAIN_T4",
+        "value": "3",
+        "type": "num"
+      },
+      {
+        "name": "RETAIN_T5",
+        "value": "3",
+        "type": "num"
+      },
+      {
+        "name": "RETAIN_MAX",
+        "value": "14",
+        "type": "num"
+      }
+    ]
+  },
+  {
+    "id": "c082712bce224692",
+    "type": "comment",
+    "z": "176e3b7c8c773818",
+    "name": "Group A \u2014 Daily Backup",
+    "info": "",
+    "x": 190,
+    "y": 120,
+    "wires": []
+  },
+  {
+    "id": "43f510d7cba4478d",
+    "type": "inject",
+    "z": "176e3b7c8c773818",
+    "name": "Daily Backup",
+    "props": [
+      {
+        "p": "payload"
+      },
+      {
+        "p": "topic",
+        "vt": "str"
+      }
+    ],
+    "repeat": "",
+    "crontab": "0 1 * * *",
+    "once": false,
+    "onceDelay": 0.1,
+    "topic": "",
+    "payload": "",
+    "payloadType": "date",
+    "x": 160,
+    "y": 180,
+    "wires": [
+      [
+        "8fa315a80d5f40f6"
+      ]
+    ]
+  },
+  {
+    "id": "8fa315a80d5f40f6",
+    "type": "function",
+    "z": "176e3b7c8c773818",
+    "name": "Build Hub List",
+    "func": "const count = parseInt(env.get('HUB_COUNT') || '0');\nif (count === 0) {\n    node.error('HUB_COUNT not set or zero');\n    return null;\n}\nconst hubs = [];\nfor (let i = 1; i <= count; i++) {\n    hubs.push({\n        name: env.get(`HUB_${i}_NAME`) || `Hub ${i}`,\n        addr: env.get(`HUB_${i}_ADDR`),\n        user: env.get(`HUB_${i}_USER`),\n        pass: env.get(`HUB_${i}_PASS`)\n    });\n}\nconst msgs = hubs.map((hub, idx) => ({\n    payload: hub,\n    parts: {\n        id: msg._msgid,\n        index: idx,\n        count: hubs.length,\n        type: 'array',\n        ch: 0\n    }\n}));\nreturn [msgs];\n",
+    "outputs": 1,
+    "timeout": 0,
+    "noerr": 0,
+    "initialize": "",
+    "finalize": "",
+    "libs": [],
+    "x": 440,
+    "y": 180,
+    "wires": [
+      [
+        "854e59afa25048bb"
+      ]
+    ]
+  },
+  {
+    "id": "854e59afa25048bb",
+    "type": "function",
+    "z": "176e3b7c8c773818",
+    "name": "Prepare Login",
+    "func": "const hub = msg.payload;\nmsg.hub = hub;\nmsg.method = 'POST';\nmsg.url = `http://${hub.addr}/login`;\nmsg.headers = { 'Content-Type': 'application/x-www-form-urlencoded' };\nmsg.payload = `username=${encodeURIComponent(hub.user)}&password=${encodeURIComponent(hub.pass)}`;\nmsg.followRedirects = false;\nreturn msg;\n",
+    "outputs": 1,
+    "timeout": 0,
+    "noerr": 0,
+    "initialize": "",
+    "finalize": "",
+    "libs": [],
+    "x": 720,
+    "y": 180,
+    "wires": [
+      [
+        "fb79d03e5f9d421d"
+      ]
+    ]
+  },
+  {
+    "id": "fb79d03e5f9d421d",
+    "type": "http request",
+    "z": "176e3b7c8c773818",
+    "name": "Login",
+    "method": "use",
+    "ret": "txt",
+    "paytoqs": "ignore",
+    "url": "",
+    "tls": "",
+    "persist": false,
+    "proxy": "",
+    "insecureHTTPParser": false,
+    "authType": "",
+    "senderr": false,
+    "headers": [],
+    "x": 930,
+    "y": 180,
+    "wires": [
+      [
+        "9da17c490353443e"
+      ]
+    ]
+  },
+  {
+    "id": "9da17c490353443e",
+    "type": "function",
+    "z": "176e3b7c8c773818",
+    "name": "After Login",
+    "func": "// Hubitat login responds with 302 redirect + Set-Cookie\nif (msg.statusCode !== 302 && msg.statusCode !== 200) {\n    node.error(`Login failed for ${msg.hub.addr}: HTTP ${msg.statusCode}`);\n    return null;\n}\nconst raw = msg.headers && msg.headers['set-cookie'];\nif (!raw) {\n    node.error(`No Set-Cookie after login for ${msg.hub.addr}`);\n    return null;\n}\nconst arr = Array.isArray(raw) ? raw : [raw];\nmsg.hubCookie = arr.map(c => c.split(';')[0]).join('; ');\n// Prepare list-backups request\nmsg.method = 'GET';\nmsg.url = `http://${msg.hub.addr}:8080/hub2/localBackups`;\nmsg.headers = { Cookie: msg.hubCookie };\nmsg.payload = {};\nreturn msg;\n",
+    "outputs": 1,
+    "timeout": 0,
+    "noerr": 0,
+    "initialize": "",
+    "finalize": "",
+    "libs": [],
+    "x": 1170,
+    "y": 180,
+    "wires": [
+      [
+        "d34005ef12d048c7"
+      ]
+    ]
+  },
+  {
+    "id": "d34005ef12d048c7",
+    "type": "http request",
+    "z": "176e3b7c8c773818",
+    "name": "List Backups",
+    "method": "use",
+    "ret": "txt",
+    "paytoqs": "ignore",
+    "url": "",
+    "tls": "",
+    "persist": false,
+    "proxy": "",
+    "insecureHTTPParser": false,
+    "authType": "",
+    "senderr": false,
+    "headers": [],
+    "x": 1390,
+    "y": 180,
+    "wires": [
+      [
+        "c82ba3ef95b944cb"
+      ]
+    ]
+  },
+  {
+    "id": "c82ba3ef95b944cb",
+    "type": "function",
+    "z": "176e3b7c8c773818",
+    "name": "Select Backup",
+    "func": "let backups;\ntry {\n    backups = typeof msg.payload === 'string' ? JSON.parse(msg.payload) : msg.payload;\n} catch(e) {\n    node.error(`Parse backups failed for ${msg.hub.addr}: ${e.message}`);\n    return null;\n}\nif (!Array.isArray(backups) || backups.length === 0) {\n    node.warn(`No backups on ${msg.hub.addr} \u2014 skipping`);\n    return null;\n}\n// API returns objects with a 'name' field \u2014 extract filenames, sort, pick newest\nconst filenames = backups.map(b => (typeof b === 'string') ? b : b.name).filter(Boolean);\nconst latest = [...filenames].sort().pop();\nmsg.backupFilename = latest;\nmsg.method = 'GET';\nmsg.url = `http://${msg.hub.addr}:8080/hub/backupDB?fileName=${encodeURIComponent(latest)}`;\nmsg.headers = { Cookie: msg.hubCookie };\nmsg.payload = {};\nreturn msg;\n",
+    "outputs": 1,
+    "timeout": 0,
+    "noerr": 0,
+    "initialize": "",
+    "finalize": "",
+    "libs": [],
+    "x": 1640,
+    "y": 180,
+    "wires": [
+      [
+        "f17410f0a3394981"
+      ]
+    ]
+  },
+  {
+    "id": "f17410f0a3394981",
+    "type": "http request",
+    "z": "176e3b7c8c773818",
+    "name": "Download Backup",
+    "method": "use",
+    "ret": "bin",
+    "paytoqs": "ignore",
+    "url": "",
+    "tls": "",
+    "persist": false,
+    "proxy": "",
+    "insecureHTTPParser": false,
+    "authType": "",
+    "senderr": false,
+    "headers": [],
+    "x": 1910,
+    "y": 180,
+    "wires": [
+      [
+        "dd770d12bda9446e"
+      ]
+    ]
+  },
+  {
+    "id": "dd770d12bda9446e",
+    "type": "function",
+    "z": "176e3b7c8c773818",
+    "name": "Build Filename",
+    "func": "if (msg.statusCode && msg.statusCode !== 200) {\n    node.error(`Download failed for ${msg.hub.addr}: HTTP ${msg.statusCode}`);\n    return null;\n}\n// Construct: YYYY-MM-DD-HHMM-<hubdate>~<version>.lzf\n// Hub filename: e.g. 2026-03-26~2.4.4.155.lzf or 2026-03-26~2.4.4.155~shutdown.lzf\nconst src = msg.backupFilename || '';\nconst hubDate = (src.match(/^(\\d{4}-\\d{2}-\\d{2})/) || ['','unknown'])[1];\nconst version = (src.match(/~(\\d+\\.\\d+\\.\\d+\\.\\d+)/) || ['','unknown'])[1];\nconst now = new Date();\nconst pad = n => String(n).padStart(2, '0');\nconst ts = `${now.getFullYear()}-${pad(now.getMonth()+1)}-${pad(now.getDate())}-${pad(now.getHours())}${pad(now.getMinutes())}`;\nconst backupPath = env.get('BACKUP_PATH') || '/backup';\nmsg.hubDir  = `${backupPath}/${msg.hub.name}`;\nmsg.filename = `${msg.hubDir}/${ts}-${hubDate}~${version}.lzf`;\n// msg.payload is already the binary buffer from http request (ret=bin)\nreturn msg;\n",
+    "outputs": 1,
+    "timeout": 0,
+    "noerr": 0,
+    "initialize": "",
+    "finalize": "",
+    "libs": [],
+    "x": 2160,
+    "y": 180,
+    "wires": [
+      [
+        "56817de161c2450e"
+      ]
+    ]
+  },
+  {
+    "id": "56817de161c2450e",
+    "type": "file",
+    "z": "176e3b7c8c773818",
+    "name": "Write Backup",
+    "filename": "filename",
+    "filenameType": "msg",
+    "appendNewline": false,
+    "createDir": true,
+    "overwriteFile": "true",
+    "encoding": "none",
+    "x": 2400,
+    "y": 180,
+    "wires": [
+      [
+        "ef2c2589b3a545cc"
+      ]
+    ]
+  },
+  {
+    "id": "ef2c2589b3a545cc",
+    "type": "function",
+    "z": "176e3b7c8c773818",
+    "name": "Retention Cleanup",
+    "func": "const T1 = parseInt(env.get('RETAIN_T1') || '3');\nconst T2 = parseInt(env.get('RETAIN_T2') || '3');\nconst T3 = parseInt(env.get('RETAIN_T3') || '3');\nconst T4 = parseInt(env.get('RETAIN_T4') || '3');\nconst T5 = parseInt(env.get('RETAIN_T5') || '3');\nconst MAX = parseInt(env.get('RETAIN_MAX') || '14');\n\nfunction parseVer(fname) {\n    const m = fname.match(/~([^~]+)\\.lzf$/);\n    if (!m) return null;\n    const p = m[1].split('.');\n    if (p.length !== 4) return null;\n    return { full: m[1],\n             patchKey: `${p[0]}.${p[1]}.${p[2]}`,\n             minorKey: `${p[0]}.${p[1]}`,\n             majorKey: p[0] };\n}\n\nconst hubDir = msg.hubDir;\nlet files;\ntry {\n    files = fs.readdirSync(hubDir).filter(f => f.endsWith('.lzf')).sort().reverse();\n} catch(e) {\n    node.warn(`Cannot read ${hubDir}: ${e.message}`);\n    msg.payload = { hub: msg.hub.name, status: 'ok', retained: 1, deleted: 0 };\n    return msg;\n}\n\nif (files.length === 0) {\n    msg.payload = { hub: msg.hub.name, status: 'ok', retained: 0, deleted: 0 };\n    return msg;\n}\n\nconst currentBuild = parseVer(files[0])?.full;\nif (!currentBuild) {\n    msg.payload = { hub: msg.hub.name, status: 'ok', retained: files.length, deleted: 0 };\n    return msg;\n}\n\nconst keep = new Set();\nlet t1Count = 0, t3Count = 0, t4Count = 0, t5Count = 0;\nconst seenBuilds = new Set();\nconst keptBuilds = new Set();\nconst seenPatches = new Set();\nconst seenMinors = new Set();\nconst seenMajors = new Set();\n\nfunction markSeen(v) {\n    seenPatches.add(v.patchKey);\n    seenMinors.add(v.minorKey);\n    seenMajors.add(v.majorKey);\n}\n\nfunction tryLower(f, v) {\n    if (!seenPatches.has(v.patchKey) && t3Count < T3) {\n        t3Count++; keep.add(f); markSeen(v);\n    } else if (!seenMinors.has(v.minorKey) && t4Count < T4) {\n        t4Count++; keep.add(f); markSeen(v);\n    } else if (!seenMajors.has(v.majorKey) && t5Count < T5) {\n        t5Count++; keep.add(f); markSeen(v);\n    }\n}\n\nfor (const f of files) {\n    const v = parseVer(f);\n    if (!v) { keep.add(f); continue; }\n    if (v.full === currentBuild) {\n        if (t1Count < T1) { keep.add(f); t1Count++; markSeen(v); }\n    } else if (!seenBuilds.has(v.full)) {\n        seenBuilds.add(v.full);\n        if (keptBuilds.size < T2) {\n            keptBuilds.add(v.full); keep.add(f); markSeen(v);\n        } else {\n            tryLower(f, v);\n        }\n    } else {\n        tryLower(f, v);\n    }\n}\n\n// Hard cap\nlet keepArr = files.filter(f => keep.has(f));\nif (keepArr.length > MAX) {\n    const capSet = new Set(keepArr.slice(0, MAX));\n    keepArr.forEach(f => { if (!capSet.has(f)) keep.delete(f); });\n}\n\nlet deleted = 0;\nfor (const f of files) {\n    if (!keep.has(f)) {\n        try { fs.unlinkSync(path.join(hubDir, f)); deleted++; }\n        catch(e) { node.warn(`Delete ${f}: ${e.message}`); }\n    }\n}\n\nmsg.payload = {\n    hub: msg.hub.name,\n    status: 'ok',\n    filename: path.basename(msg.filename || ''),\n    retained: keep.size,\n    deleted\n};\nreturn msg;\n",
+    "outputs": 1,
+    "timeout": 0,
+    "noerr": 0,
+    "initialize": "",
+    "finalize": "",
+    "libs": [
+      {
+        "var": "fs",
+        "module": "fs"
+      },
+      {
+        "var": "path",
+        "module": "path"
+      }
+    ],
+    "x": 2650,
+    "y": 180,
+    "wires": [
+      [
+        "ad76490f06a24938"
+      ]
+    ]
+  },
+  {
+    "id": "ad76490f06a24938",
+    "type": "join",
+    "z": "176e3b7c8c773818",
+    "name": "Collect Results",
+    "mode": "auto",
+    "build": "array",
+    "property": "payload",
+    "propertyType": "msg",
+    "key": "topic",
+    "joiner": "\\n",
+    "joinerType": "str",
+    "useparts": true,
+    "accumulate": false,
+    "timeout": "",
+    "count": "",
+    "reduceRight": false,
+    "x": 2920,
+    "y": 180,
+    "wires": [
+      [
+        "2407d052463a4f80"
+      ]
+    ]
+  },
+  {
+    "id": "2407d052463a4f80",
+    "type": "function",
+    "z": "176e3b7c8c773818",
+    "name": "Format Status",
+    "func": "// msg.payload is the array of hub results collected by the join node\nconst results = Array.isArray(msg.payload) ? msg.payload : [msg.payload];\nmsg.payload = {\n    timestamp: new Date().toISOString(),\n    results\n};\nmsg.topic = 'homelab/hubitat/backup/status';\nreturn msg;\n",
+    "outputs": 1,
+    "timeout": 0,
+    "noerr": 0,
+    "initialize": "",
+    "finalize": "",
+    "libs": [],
+    "x": 3160,
+    "y": 180,
+    "wires": [
+      [
+        "0d3eb62d1b69466b"
+      ]
+    ]
+  },
+  {
+    "id": "0d3eb62d1b69466b",
+    "type": "mqtt out",
+    "z": "176e3b7c8c773818",
+    "name": "Backup Status",
+    "topic": "homelab/hubitat/backup/status",
+    "qos": "0",
+    "retain": "false",
+    "respTopic": "",
+    "contentType": "",
+    "userProps": "",
+    "correl": "",
+    "expiry": "",
+    "broker": "ff09d3174dd34436",
+    "x": 3400,
+    "y": 180,
+    "wires": []
+  },
+  {
+    "id": "b991c4cc3f494e20",
+    "type": "comment",
+    "z": "176e3b7c8c773818",
+    "name": "Group B \u2014 Update Check",
+    "info": "",
+    "x": 190,
+    "y": 440,
+    "wires": []
+  },
+  {
+    "id": "1b17b19794fb4205",
+    "type": "inject",
+    "z": "176e3b7c8c773818",
+    "name": "Update Check",
+    "props": [
+      {
+        "p": "payload"
+      },
+      {
+        "p": "topic",
+        "vt": "str"
+      }
+    ],
+    "repeat": "",
+    "crontab": "0 3 * * *",
+    "once": false,
+    "onceDelay": 0.1,
+    "topic": "",
+    "payload": "",
+    "payloadType": "date",
+    "x": 160,
+    "y": 500,
+    "wires": [
+      [
+        "8f128a4acf804abe"
+      ]
+    ]
+  },
+  {
+    "id": "8f128a4acf804abe",
+    "type": "function",
+    "z": "176e3b7c8c773818",
+    "name": "Build Hub List",
+    "func": "const count = parseInt(env.get('HUB_COUNT') || '0');\nif (count === 0) {\n    node.error('HUB_COUNT not set or zero');\n    return null;\n}\nconst hubs = [];\nfor (let i = 1; i <= count; i++) {\n    hubs.push({\n        name: env.get(`HUB_${i}_NAME`) || `Hub ${i}`,\n        addr: env.get(`HUB_${i}_ADDR`),\n        user: env.get(`HUB_${i}_USER`),\n        pass: env.get(`HUB_${i}_PASS`)\n    });\n}\nconst msgs = hubs.map((hub, idx) => ({\n    payload: hub,\n    parts: {\n        id: msg._msgid,\n        index: idx,\n        count: hubs.length,\n        type: 'array',\n        ch: 0\n    }\n}));\nreturn [msgs];\n",
+    "outputs": 1,
+    "timeout": 0,
+    "noerr": 0,
+    "initialize": "",
+    "finalize": "",
+    "libs": [],
+    "x": 440,
+    "y": 500,
+    "wires": [
+      [
+        "51ac179a22eb47dd"
+      ]
+    ]
+  },
+  {
+    "id": "51ac179a22eb47dd",
+    "type": "function",
+    "z": "176e3b7c8c773818",
+    "name": "Prepare Login",
+    "func": "const hub = msg.payload;\nmsg.hub = hub;\nmsg.method = 'POST';\nmsg.url = `http://${hub.addr}/login`;\nmsg.headers = { 'Content-Type': 'application/x-www-form-urlencoded' };\nmsg.payload = `username=${encodeURIComponent(hub.user)}&password=${encodeURIComponent(hub.pass)}`;\nmsg.followRedirects = false;\nreturn msg;\n",
+    "outputs": 1,
+    "timeout": 0,
+    "noerr": 0,
+    "initialize": "",
+    "finalize": "",
+    "libs": [],
+    "x": 720,
+    "y": 500,
+    "wires": [
+      [
+        "a659f25de7604f49"
+      ]
+    ]
+  },
+  {
+    "id": "a659f25de7604f49",
+    "type": "http request",
+    "z": "176e3b7c8c773818",
+    "name": "Login",
+    "method": "use",
+    "ret": "txt",
+    "paytoqs": "ignore",
+    "url": "",
+    "tls": "",
+    "persist": false,
+    "proxy": "",
+    "insecureHTTPParser": false,
+    "authType": "",
+    "senderr": false,
+    "headers": [],
+    "x": 930,
+    "y": 500,
+    "wires": [
+      [
+        "d2afa90361b94aa2"
+      ]
+    ]
+  },
+  {
+    "id": "d2afa90361b94aa2",
+    "type": "function",
+    "z": "176e3b7c8c773818",
+    "name": "After Login",
+    "func": "if (msg.statusCode !== 302 && msg.statusCode !== 200) {\n    node.error(`Login failed for ${msg.hub.addr}: HTTP ${msg.statusCode}`);\n    return null;\n}\nconst raw = msg.headers && msg.headers['set-cookie'];\nif (!raw) { node.error(`No cookie for ${msg.hub.addr}`); return null; }\nconst arr = Array.isArray(raw) ? raw : [raw];\nmsg.hubCookie = arr.map(c => c.split(';')[0]).join('; ');\n// Trigger update check\nmsg.method = 'GET';\nmsg.url = `http://${msg.hub.addr}:8080/hub/cloud/checkForUpdate`;\nmsg.headers = { Cookie: msg.hubCookie };\nmsg.payload = {};\nreturn msg;\n",
+    "outputs": 1,
+    "timeout": 0,
+    "noerr": 0,
+    "initialize": "",
+    "finalize": "",
+    "libs": [],
+    "x": 1170,
+    "y": 500,
+    "wires": [
+      [
+        "dd39f72d61174ab0"
+      ]
+    ]
+  },
+  {
+    "id": "dd39f72d61174ab0",
+    "type": "http request",
+    "z": "176e3b7c8c773818",
+    "name": "Check Update",
+    "method": "use",
+    "ret": "txt",
+    "paytoqs": "ignore",
+    "url": "",
+    "tls": "",
+    "persist": false,
+    "proxy": "",
+    "insecureHTTPParser": false,
+    "authType": "",
+    "senderr": false,
+    "headers": [],
+    "x": 1400,
+    "y": 500,
+    "wires": [
+      [
+        "c1d5dad618a245b8"
+      ]
+    ]
+  },
+  {
+    "id": "c1d5dad618a245b8",
+    "type": "function",
+    "z": "176e3b7c8c773818",
+    "name": "Parse Update",
+    "func": "// After checkForUpdate, get hub details\nlet checkResult;\ntry {\n    checkResult = typeof msg.payload === 'string' ? JSON.parse(msg.payload) : msg.payload;\n} catch(e) { checkResult = {}; }\nmsg.updateCheck = checkResult;\n// Now fetch hub details to get current version\nmsg.method = 'GET';\nmsg.url = `http://${msg.hub.addr}:8080/hub/details/json`;\nmsg.headers = { Cookie: msg.hubCookie };\nmsg.payload = {};\nreturn msg;\n",
+    "outputs": 1,
+    "timeout": 0,
+    "noerr": 0,
+    "initialize": "",
+    "finalize": "",
+    "libs": [],
+    "x": 1640,
+    "y": 500,
+    "wires": [
+      [
+        "6ed009dc3ee54326"
+      ]
+    ]
+  },
+  {
+    "id": "6ed009dc3ee54326",
+    "type": "http request",
+    "z": "176e3b7c8c773818",
+    "name": "Hub Details",
+    "method": "use",
+    "ret": "txt",
+    "paytoqs": "ignore",
+    "url": "",
+    "tls": "",
+    "persist": false,
+    "proxy": "",
+    "insecureHTTPParser": false,
+    "authType": "",
+    "senderr": false,
+    "headers": [],
+    "x": 1890,
+    "y": 500,
+    "wires": [
+      [
+        "6616e07a5464495e"
+      ]
+    ]
+  },
+  {
+    "id": "6616e07a5464495e",
+    "type": "function",
+    "z": "176e3b7c8c773818",
+    "name": "Format Update",
+    "func": "let details;\ntry {\n    details = typeof msg.payload === 'string' ? JSON.parse(msg.payload) : msg.payload;\n} catch(e) { details = {}; }\n\nconst check = msg.updateCheck || {};\n// Hub Details returns platformVersion (not version); checkForUpdate status is UPDATE_AVAILABLE\nconst currentVersion = details.platformVersion || details.version || 'unknown';\nconst updateAvailable = !!(check.status === 'UPDATE_AVAILABLE' ||\n                           (check.version && check.version !== currentVersion));\nmsg.payload = {\n    hub: msg.hub.name,\n    addr: msg.hub.addr,\n    currentVersion,\n    updateAvailable,\n    newVersion: check.version || null,\n    raw: check\n};\nreturn msg;\n",
+    "outputs": 1,
+    "timeout": 0,
+    "noerr": 0,
+    "initialize": "",
+    "finalize": "",
+    "libs": [],
+    "x": 2160,
+    "y": 500,
+    "wires": [
+      [
+        "bbe80a3a20f7463a"
+      ]
+    ]
+  },
+  {
+    "id": "bbe80a3a20f7463a",
+    "type": "join",
+    "z": "176e3b7c8c773818",
+    "name": "Collect Results",
+    "mode": "auto",
+    "build": "array",
+    "property": "payload",
+    "propertyType": "msg",
+    "key": "topic",
+    "joiner": "\\n",
+    "joinerType": "str",
+    "useparts": true,
+    "accumulate": false,
+    "timeout": "",
+    "count": "",
+    "reduceRight": false,
+    "x": 2400,
+    "y": 500,
+    "wires": [
+      [
+        "284523a524ae4cb6"
+      ]
+    ]
+  },
+  {
+    "id": "284523a524ae4cb6",
+    "type": "function",
+    "z": "176e3b7c8c773818",
+    "name": "Format Update Status",
+    "func": "const results = Array.isArray(msg.payload) ? msg.payload : [msg.payload];\nconst withUpdates = results.filter(r => r && r.updateAvailable);\nmsg.payload = {\n    timestamp: new Date().toISOString(),\n    checked: results.length,\n    updatesAvailable: withUpdates.length,\n    hubs: results\n};\nmsg.topic = 'homelab/hubitat/update/available';\nreturn msg;\n",
+    "outputs": 1,
+    "timeout": 0,
+    "noerr": 0,
+    "initialize": "",
+    "finalize": "",
+    "libs": [],
+    "x": 2660,
+    "y": 500,
+    "wires": [
+      [
+        "3d1702639773498c"
+      ]
+    ]
+  },
+  {
+    "id": "3d1702639773498c",
+    "type": "mqtt out",
+    "z": "176e3b7c8c773818",
+    "name": "Update Status",
+    "topic": "homelab/hubitat/update/available",
+    "qos": "0",
+    "retain": "false",
+    "respTopic": "",
+    "contentType": "",
+    "userProps": "",
+    "correl": "",
+    "expiry": "",
+    "broker": "ff09d3174dd34436",
+    "x": 2920,
+    "y": 500,
+    "wires": []
+  },
+  {
+    "id": "c6bae7fb217c4812",
+    "type": "comment",
+    "z": "176e3b7c8c773818",
+    "name": "Group C \u2014 Manual Update Trigger",
+    "info": "",
+    "x": 220,
+    "y": 700,
+    "wires": []
+  },
+  {
+    "id": "839699b5e863434d",
+    "type": "inject",
+    "z": "176e3b7c8c773818",
+    "name": "Hub Ashmont Control",
+    "props": [
+      {
+        "p": "payload"
+      },
+      {
+        "p": "topic",
+        "vt": "str"
+      }
+    ],
+    "repeat": "",
+    "crontab": "",
+    "once": false,
+    "onceDelay": 0.1,
+    "topic": "",
+    "payload": "",
+    "payloadType": "date",
+    "x": 180,
+    "y": 760,
+    "wires": [
+      [
+        "6756248d49494863"
+      ]
+    ]
+  },
+  {
+    "id": "6756248d49494863",
+    "type": "function",
+    "z": "176e3b7c8c773818",
+    "name": "Hub Ashmont Control",
+    "func": "const count = parseInt(env.get('HUB_COUNT') || '0');\nfor (let i = 1; i <= count; i++) {\n    if ((env.get(`HUB_${i}_NAME`) || '').toLowerCase().replace(/^hub /, '') === 'ashmont control') {\n        msg.hub = {\n            name: env.get(`HUB_${i}_NAME`),\n            addr: env.get(`HUB_${i}_ADDR`),\n            user: env.get(`HUB_${i}_USER`),\n            pass: env.get(`HUB_${i}_PASS`)\n        };\n        break;\n    }\n}\nif (!msg.hub) { node.error('Hub \"Hub Ashmont Control\" not found in env vars'); return null; }\nconst hub = msg.hub;\nmsg.method = 'POST';\nmsg.url = `http://${hub.addr}/login`;\nmsg.headers = { 'Content-Type': 'application/x-www-form-urlencoded' };\nmsg.payload = `username=${encodeURIComponent(hub.user)}&password=${encodeURIComponent(hub.pass)}`;\nmsg.followRedirects = false;\nreturn msg;\n",
+    "outputs": 1,
+    "timeout": 0,
+    "noerr": 0,
+    "initialize": "",
+    "finalize": "",
+    "libs": [],
+    "x": 460,
+    "y": 760,
+    "wires": [
+      [
+        "89f20ceb754842ea"
+      ]
+    ]
+  },
+  {
+    "id": "477c59c6ad3245bb",
+    "type": "inject",
+    "z": "176e3b7c8c773818",
+    "name": "Hub Ashmont 116",
+    "props": [
+      {
+        "p": "payload"
+      },
+      {
+        "p": "topic",
+        "vt": "str"
+      }
+    ],
+    "repeat": "",
+    "crontab": "",
+    "once": false,
+    "onceDelay": 0.1,
+    "topic": "",
+    "payload": "",
+    "payloadType": "date",
+    "x": 170,
+    "y": 820,
+    "wires": [
+      [
+        "53fab5f2f2864b8e"
+      ]
+    ]
+  },
+  {
+    "id": "53fab5f2f2864b8e",
+    "type": "function",
+    "z": "176e3b7c8c773818",
+    "name": "Hub Ashmont 116",
+    "func": "const count = parseInt(env.get('HUB_COUNT') || '0');\nfor (let i = 1; i <= count; i++) {\n    if ((env.get(`HUB_${i}_NAME`) || '').toLowerCase().replace(/^hub /, '') === 'ashmont 116') {\n        msg.hub = {\n            name: env.get(`HUB_${i}_NAME`),\n            addr: env.get(`HUB_${i}_ADDR`),\n            user: env.get(`HUB_${i}_USER`),\n            pass: env.get(`HUB_${i}_PASS`)\n        };\n        break;\n    }\n}\nif (!msg.hub) { node.error('Hub \"Hub Ashmont 116\" not found in env vars'); return null; }\nconst hub = msg.hub;\nmsg.method = 'POST';\nmsg.url = `http://${hub.addr}/login`;\nmsg.headers = { 'Content-Type': 'application/x-www-form-urlencoded' };\nmsg.payload = `username=${encodeURIComponent(hub.user)}&password=${encodeURIComponent(hub.pass)}`;\nmsg.followRedirects = false;\nreturn msg;\n",
+    "outputs": 1,
+    "timeout": 0,
+    "noerr": 0,
+    "initialize": "",
+    "finalize": "",
+    "libs": [],
+    "x": 450,
+    "y": 820,
+    "wires": [
+      [
+        "89f20ceb754842ea"
+      ]
+    ]
+  },
+  {
+    "id": "54871cf2cee64514",
+    "type": "inject",
+    "z": "176e3b7c8c773818",
+    "name": "Hub McKinney",
+    "props": [
+      {
+        "p": "payload"
+      },
+      {
+        "p": "topic",
+        "vt": "str"
+      }
+    ],
+    "repeat": "",
+    "crontab": "",
+    "once": false,
+    "onceDelay": 0.1,
+    "topic": "",
+    "payload": "",
+    "payloadType": "date",
+    "x": 160,
+    "y": 880,
+    "wires": [
+      [
+        "c2690f06d5df4dba"
+      ]
+    ]
+  },
+  {
+    "id": "c2690f06d5df4dba",
+    "type": "function",
+    "z": "176e3b7c8c773818",
+    "name": "Hub McKinney",
+    "func": "const count = parseInt(env.get('HUB_COUNT') || '0');\nfor (let i = 1; i <= count; i++) {\n    if ((env.get(`HUB_${i}_NAME`) || '').toLowerCase().replace(/^hub /, '') === 'mckinney') {\n        msg.hub = {\n            name: env.get(`HUB_${i}_NAME`),\n            addr: env.get(`HUB_${i}_ADDR`),\n            user: env.get(`HUB_${i}_USER`),\n            pass: env.get(`HUB_${i}_PASS`)\n        };\n        break;\n    }\n}\nif (!msg.hub) { node.error('Hub \"Hub McKinney\" not found in env vars'); return null; }\nconst hub = msg.hub;\nmsg.method = 'POST';\nmsg.url = `http://${hub.addr}/login`;\nmsg.headers = { 'Content-Type': 'application/x-www-form-urlencoded' };\nmsg.payload = `username=${encodeURIComponent(hub.user)}&password=${encodeURIComponent(hub.pass)}`;\nmsg.followRedirects = false;\nreturn msg;\n",
+    "outputs": 1,
+    "timeout": 0,
+    "noerr": 0,
+    "initialize": "",
+    "finalize": "",
+    "libs": [],
+    "x": 440,
+    "y": 880,
+    "wires": [
+      [
+        "89f20ceb754842ea"
+      ]
+    ]
+  },
+  {
+    "id": "89f20ceb754842ea",
+    "type": "http request",
+    "z": "176e3b7c8c773818",
+    "name": "Login",
+    "method": "use",
+    "ret": "txt",
+    "paytoqs": "ignore",
+    "url": "",
+    "tls": "",
+    "persist": false,
+    "proxy": "",
+    "insecureHTTPParser": false,
+    "authType": "",
+    "senderr": false,
+    "headers": [],
+    "x": 690,
+    "y": 820,
+    "wires": [
+      [
+        "4baf7fb124fb4116"
+      ]
+    ]
+  },
+  {
+    "id": "4baf7fb124fb4116",
+    "type": "function",
+    "z": "176e3b7c8c773818",
+    "name": "After Login",
+    "func": "if (msg.statusCode !== 302 && msg.statusCode !== 200) {\n    node.error(`Login failed for ${msg.hub.addr}: HTTP ${msg.statusCode}`);\n    return null;\n}\nconst raw = msg.headers && msg.headers['set-cookie'];\nif (!raw) { node.error(`No cookie for ${msg.hub.addr}`); return null; }\nconst arr = Array.isArray(raw) ? raw : [raw];\nmsg.hubCookie = arr.map(c => c.split(';')[0]).join('; ');\n// Get current version before applying update\nmsg.method = 'GET';\nmsg.url = `http://${msg.hub.addr}:8080/hub/details/json`;\nmsg.headers = { Cookie: msg.hubCookie };\nmsg.payload = {};\nreturn msg;\n",
+    "outputs": 1,
+    "timeout": 0,
+    "noerr": 0,
+    "initialize": "",
+    "finalize": "",
+    "libs": [],
+    "x": 950,
+    "y": 820,
+    "wires": [
+      [
+        "8c6f4568b35a4bb4"
+      ]
+    ]
+  },
+  {
+    "id": "8c6f4568b35a4bb4",
+    "type": "http request",
+    "z": "176e3b7c8c773818",
+    "name": "List Backups",
+    "method": "use",
+    "ret": "txt",
+    "paytoqs": "ignore",
+    "url": "",
+    "tls": "",
+    "persist": false,
+    "proxy": "",
+    "insecureHTTPParser": false,
+    "authType": "",
+    "senderr": false,
+    "headers": [],
+    "x": 1170,
+    "y": 820,
+    "wires": [
+      [
+        "81bf5956b6794cc9"
+      ]
+    ]
+  },
+  {
+    "id": "81bf5956b6794cc9",
+    "type": "function",
+    "z": "176e3b7c8c773818",
+    "name": "Select Backup",
+    "func": "let backups;\ntry { backups = typeof msg.payload === 'string' ? JSON.parse(msg.payload) : msg.payload; }\ncatch(e) { backups = []; }\nif (Array.isArray(backups) && backups.length > 0) {\n    const filenames = backups.map(b => (typeof b === 'string') ? b : b.name).filter(Boolean);\n    const latest = [...filenames].sort().pop();\n    msg.backupFilename = latest;\n    msg.method = 'GET';\n    msg.url = `http://${msg.hub.addr}:8080/hub/backupDB?fileName=${encodeURIComponent(latest)}`;\n    msg.headers = { Cookie: msg.hubCookie };\n    msg.payload = {};\n} else {\n    // No backups available, skip download and go straight to update\n    msg.skipBackup = true;\n    msg.payload = Buffer.alloc(0);\n}\nreturn msg;\n",
+    "outputs": 1,
+    "timeout": 0,
+    "noerr": 0,
+    "initialize": "",
+    "finalize": "",
+    "libs": [],
+    "x": 1400,
+    "y": 820,
+    "wires": [
+      [
+        "aa6646cc3035444a"
+      ]
+    ]
+  },
+  {
+    "id": "aa6646cc3035444a",
+    "type": "http request",
+    "z": "176e3b7c8c773818",
+    "name": "Download Backup",
+    "method": "use",
+    "ret": "bin",
+    "paytoqs": "ignore",
+    "url": "",
+    "tls": "",
+    "persist": false,
+    "proxy": "",
+    "insecureHTTPParser": false,
+    "authType": "",
+    "senderr": false,
+    "headers": [],
+    "x": 1650,
+    "y": 820,
+    "wires": [
+      [
+        "88a7a9ed586b4031"
+      ]
+    ]
+  },
+  {
+    "id": "88a7a9ed586b4031",
+    "type": "function",
+    "z": "176e3b7c8c773818",
+    "name": "Save Backup",
+    "func": "// Save pre-update backup (same filename logic as Group A)\nif (msg.skipBackup) {\n    // No backup to write \u2014 point at /dev/null so the file node doesn't error\n    msg.filename = '/dev/null';\n    msg.payload = Buffer.alloc(0);\n} else {\n    if (msg.statusCode !== 200) {\n        node.error(`Backup download failed for ${msg.hub.addr}: HTTP ${msg.statusCode}`);\n        return null;\n    }\n    const src = msg.backupFilename || '';\n    const hubDate = (src.match(/^(\\d{4}-\\d{2}-\\d{2})/) || ['','unknown'])[1];\n    const version = (src.match(/~(\\d+\\.\\d+\\.\\d+\\.\\d+)/) || ['','unknown'])[1];\n    const now = new Date();\n    const pad = n => String(n).padStart(2,'0');\n    const ts = `${now.getFullYear()}-${pad(now.getMonth()+1)}-${pad(now.getDate())}-${pad(now.getHours())}${pad(now.getMinutes())}`;\n    const backupPath = env.get('BACKUP_PATH') || '/backup';\n    msg.hubDir  = `${backupPath}/${msg.hub.name}`;\n    msg.filename = `${msg.hubDir}/${ts}-${hubDate}~${version}.lzf`;\n}\n// Prep Hub Details GET \u2014 Write Backup passes msg through; http req node picks up msg.url\nmsg.method = 'GET';\nmsg.url = `http://${msg.hub.addr}:8080/hub/details/json`;\nmsg.headers = { Cookie: msg.hubCookie };\nreturn msg;\n",
+    "outputs": 1,
+    "timeout": 0,
+    "noerr": 0,
+    "initialize": "",
+    "finalize": "",
+    "libs": [],
+    "x": 1900,
+    "y": 820,
+    "wires": [
+      [
+        "820b3ce4f24c4496"
+      ]
+    ]
+  },
+  {
+    "id": "820b3ce4f24c4496",
+    "type": "file",
+    "z": "176e3b7c8c773818",
+    "name": "Write Backup",
+    "filename": "filename",
+    "filenameType": "msg",
+    "appendNewline": false,
+    "createDir": true,
+    "overwriteFile": "true",
+    "encoding": "none",
+    "x": 2160,
+    "y": 820,
+    "wires": [
+      [
+        "785e7e2b2b234321"
+      ]
+    ]
+  },
+  {
+    "id": "785e7e2b2b234321",
+    "type": "http request",
+    "z": "176e3b7c8c773818",
+    "name": "Get Version",
+    "method": "use",
+    "ret": "txt",
+    "paytoqs": "ignore",
+    "url": "",
+    "tls": "",
+    "persist": false,
+    "proxy": "",
+    "insecureHTTPParser": false,
+    "authType": "",
+    "senderr": false,
+    "headers": [],
+    "x": 2390,
+    "y": 820,
+    "wires": [
+      [
+        "7c1e7e83f83b4225"
+      ]
+    ]
+  },
+  {
+    "id": "7c1e7e83f83b4225",
+    "type": "function",
+    "z": "176e3b7c8c773818",
+    "name": "Apply Update",
+    "func": "// Capture firmware version before triggering update\nlet details;\ntry { details = typeof msg.payload === 'string' ? JSON.parse(msg.payload) : msg.payload; }\ncatch(e) { details = {}; }\nmsg.versionBefore = details.platformVersion || 'unknown';\n// Prep updatePlatform request\nmsg.method = 'GET';\nmsg.url = `http://${msg.hub.addr}:8080/hub/cloud/updatePlatform`;\nmsg.headers = { Cookie: msg.hubCookie };\nmsg.payload = {};\nreturn msg;\n",
+    "outputs": 1,
+    "timeout": 0,
+    "noerr": 0,
+    "initialize": "",
+    "finalize": "",
+    "libs": [],
+    "x": 2640,
+    "y": 820,
+    "wires": [
+      [
+        "35d92e5838814e90"
+      ]
+    ]
+  },
+  {
+    "id": "35d92e5838814e90",
+    "type": "http request",
+    "z": "176e3b7c8c773818",
+    "name": "Trigger Update",
+    "method": "use",
+    "ret": "txt",
+    "paytoqs": "ignore",
+    "url": "",
+    "tls": "",
+    "persist": false,
+    "proxy": "",
+    "insecureHTTPParser": false,
+    "authType": "",
+    "senderr": false,
+    "headers": [],
+    "x": 2920,
+    "y": 820,
+    "wires": [
+      [
+        "879971950227488d"
+      ]
+    ]
+  },
+  {
+    "id": "879971950227488d",
+    "type": "function",
+    "z": "176e3b7c8c773818",
+    "name": "Poll Init",
+    "func": "// Initialize poll loop counter\nmsg.pollCount = 0;\nmsg.pollMax = 40;  // 40 \u00d7 30s = 20 min max\nmsg.hubWentDown = false;  // set true by catch node if ECONNREFUSED during poll\nreturn msg;\n",
+    "outputs": 1,
+    "timeout": 0,
+    "noerr": 0,
+    "initialize": "",
+    "finalize": "",
+    "libs": [],
+    "x": 3140,
+    "y": 820,
+    "wires": [
+      [
+        "7fe33bb0e0824caa"
+      ]
+    ]
+  },
+  {
+    "id": "7fe33bb0e0824caa",
+    "type": "delay",
+    "z": "176e3b7c8c773818",
+    "name": "Wait 30s",
+    "pauseType": "delay",
+    "timeout": "30",
+    "timeoutUnits": "seconds",
+    "rate": "1",
+    "nbRateUnits": "1",
+    "rateUnits": "second",
+    "randomFirst": "1",
+    "randomLast": "5",
+    "randomUnits": "seconds",
+    "drop": false,
+    "allowrate": false,
+    "outputs": 1,
+    "x": 3380,
+    "y": 820,
+    "wires": [
+      [
+        "b7c77d7ee24f44f3"
+      ]
+    ]
+  },
+  {
+    "id": "b7c77d7ee24f44f3",
+    "type": "function",
+    "z": "176e3b7c8c773818",
+    "name": "Prep Login",
+    "func": "// Re-authenticate before every poll \u2014 hub session cookie expires on reboot\nconst hub = msg.hub;\nmsg.method = 'POST';\nmsg.url = `http://${hub.addr}/login`;\nmsg.headers = { 'Content-Type': 'application/x-www-form-urlencoded' };\nmsg.payload = `username=${encodeURIComponent(hub.user)}&password=${encodeURIComponent(hub.pass)}`;\nmsg.followRedirects = false;\ndelete msg.error;\nreturn msg;\n",
+    "outputs": 1,
+    "timeout": 0,
+    "noerr": 0,
+    "initialize": "",
+    "finalize": "",
+    "libs": [],
+    "x": 3630,
+    "y": 820,
+    "wires": [
+      [
+        "3b4c9b8511fe4338"
+      ]
+    ]
+  },
+  {
+    "id": "3b4c9b8511fe4338",
+    "type": "http request",
+    "z": "176e3b7c8c773818",
+    "name": "Re-Login",
+    "method": "use",
+    "ret": "txt",
+    "paytoqs": "ignore",
+    "url": "",
+    "tls": "",
+    "persist": false,
+    "proxy": "",
+    "insecureHTTPParser": false,
+    "authType": "",
+    "senderr": false,
+    "headers": [],
+    "x": 3840,
+    "y": 820,
+    "wires": [
+      [
+        "3682eb1b23ad45ee"
+      ]
+    ]
+  },
+  {
+    "id": "3682eb1b23ad45ee",
+    "type": "function",
+    "z": "176e3b7c8c773818",
+    "name": "After Re-Login",
+    "func": "// Extract refreshed session cookie and prepare Hub Details request\nconst setCookie = msg.headers && (msg.headers['set-cookie'] || msg.headers['Set-Cookie']);\nif (setCookie) {\n    const cookies = Array.isArray(setCookie) ? setCookie : [setCookie];\n    msg.hubCookie = cookies.map(c => c.split(';')[0]).join('; ');\n}\nmsg.method = 'GET';\nmsg.url = `http://${msg.hub.addr}:8080/hub/details/json`;\nmsg.headers = { Cookie: msg.hubCookie };\nmsg.payload = {};\nreturn msg;\n",
+    "outputs": 1,
+    "timeout": 0,
+    "noerr": 0,
+    "initialize": "",
+    "finalize": "",
+    "libs": [],
+    "x": 4060,
+    "y": 820,
+    "wires": [
+      [
+        "08d6086fa71a43ad"
+      ]
+    ]
+  },
+  {
+    "id": "08d6086fa71a43ad",
+    "type": "http request",
+    "z": "176e3b7c8c773818",
+    "name": "Hub Details",
+    "method": "use",
+    "ret": "txt",
+    "paytoqs": "ignore",
+    "url": "",
+    "tls": "",
+    "persist": false,
+    "proxy": "",
+    "insecureHTTPParser": false,
+    "authType": "",
+    "senderr": false,
+    "headers": [],
+    "x": 4290,
+    "y": 820,
+    "wires": [
+      [
+        "d137c8a6fc864d6e"
+      ]
+    ]
+  },
+  {
+    "id": "d137c8a6fc864d6e",
+    "type": "function",
+    "z": "176e3b7c8c773818",
+    "name": "Poll Check",
+    "func": "let details;\ntry { details = typeof msg.payload === 'string' ? JSON.parse(msg.payload) : msg.payload; }\ncatch(e) { details = {}; }\nmsg.pollCount = (msg.pollCount || 0) + 1;\nconst newVersion = details.platformVersion || '';\nconst changed = newVersion && newVersion !== msg.versionBefore;\nconst timedOut = msg.pollCount >= (msg.pollMax || 40);\n\nif (changed) {\n    // Done \u2014 update applied\n    msg.payload = {\n        hub: msg.hub.name,\n        status: 'updated',\n        versionBefore: msg.versionBefore || 'unknown',\n        versionAfter: newVersion,\n        polls: msg.pollCount\n    };\n    return [msg, null];  // port 0: done\n} else if (timedOut) {\n    // 40 polls (20 min) elapsed with no version change \u2014 update did not apply.\n    msg.payload = {\n        hub: msg.hub.name,\n        status: 'no_change',\n        version: newVersion,\n        polls: msg.pollCount\n    };\n    return [msg, null];  // port 0: done\n} else {\n    // Not yet \u2014 loop back through delay (Prep Login will re-auth next iteration)\n    return [null, msg];  // port 1: loop back through delay\n}\n",
+    "outputs": 2,
+    "timeout": 0,
+    "noerr": 0,
+    "initialize": "",
+    "finalize": "",
+    "libs": [],
+    "x": 4510,
+    "y": 820,
+    "wires": [
+      [
+        "17b7672732914f8b"
+      ],
+      [
+        "7fe33bb0e0824caa"
+      ]
+    ]
+  },
+  {
+    "id": "689b29eba84247e6",
+    "type": "catch",
+    "z": "176e3b7c8c773818",
+    "name": "Poll Error",
+    "scope": [
+      "3b4c9b8511fe4338",
+      "08d6086fa71a43ad"
+    ],
+    "uncaught": false,
+    "x": 2900,
+    "y": 900,
+    "wires": [
+      [
+        "4ffcbebf35814916"
+      ]
+    ]
+  },
+  {
+    "id": "4ffcbebf35814916",
+    "type": "function",
+    "z": "176e3b7c8c773818",
+    "name": "Poll Catch",
+    "func": "msg.hubWentDown = true;\nmsg.pollCount = (msg.pollCount || 0) + 1;\ndelete msg.error;\nif (msg.pollCount >= (msg.pollMax || 40)) {\n    msg.payload = {\n        hub: msg.hub ? msg.hub.name : 'unknown',\n        status: 'timeout',\n        error: 'connection refused',\n        polls: msg.pollCount\n    };\n    return [msg, null];  // port 0: exit to Format Result\n}\nreturn [null, msg];  // port 1: loop back through delay\n",
+    "outputs": 2,
+    "timeout": 0,
+    "noerr": 0,
+    "initialize": "",
+    "finalize": "",
+    "libs": [],
+    "x": 3150,
+    "y": 900,
+    "wires": [
+      [
+        "17b7672732914f8b"
+      ],
+      [
+        "7fe33bb0e0824caa"
+      ]
+    ]
+  },
+  {
+    "id": "17b7672732914f8b",
+    "type": "function",
+    "z": "176e3b7c8c773818",
+    "name": "Format Result",
+    "func": "msg.payload = {\n    timestamp: new Date().toISOString(),\n    ...msg.payload\n};\nmsg.topic = 'homelab/hubitat/update/result';\nreturn msg;\n",
+    "outputs": 1,
+    "timeout": 0,
+    "noerr": 0,
+    "initialize": "",
+    "finalize": "",
+    "libs": [],
+    "x": 4740,
+    "y": 900,
+    "wires": [
+      [
+        "d66afc1a0c954a0e"
+      ]
+    ]
+  },
+  {
+    "id": "d66afc1a0c954a0e",
+    "type": "mqtt out",
+    "z": "176e3b7c8c773818",
+    "name": "Update Result",
+    "topic": "homelab/hubitat/update/result",
+    "qos": "0",
+    "retain": "false",
+    "respTopic": "",
+    "contentType": "",
+    "userProps": "",
+    "correl": "",
+    "expiry": "",
+    "broker": "ff09d3174dd34436",
+    "x": 4980,
+    "y": 900,
+    "wires": []
+  }
+]
