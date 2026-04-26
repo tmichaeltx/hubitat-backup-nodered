@@ -17,8 +17,6 @@ Tested with Hubitat C-5 hubs running firmware 2.4.x and 2.5.x.
 - Node-RED (tested on 4.x)
 - An MQTT broker (e.g. Mosquitto)
 - A directory on the host mounted into the Node-RED container at `/backup`
-- `functionExternalModules: true` in your Node-RED `settings.js` (required for the `libs` array in function nodes, though this flow does not currently use external modules — safe to enable)
-
 ### Volume mount example (Docker Compose)
 
 ```yaml
