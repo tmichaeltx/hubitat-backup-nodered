@@ -24,6 +24,14 @@ volumes:
   - /path/to/your/backup/dir:/backup
 ```
 
+The host directory must exist before starting the container. If you add this mount to an existing container, you must recreate it (not just restart) for the mount to take effect:
+
+```bash
+docker compose up -d
+```
+
+A plain `docker restart` will not pick up volume changes — `docker compose up -d` is required to recreate the container with the updated mount.
+
 ---
 
 ## Setup
