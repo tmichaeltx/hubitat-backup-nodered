@@ -155,7 +155,13 @@ The login response sets a session cookie. All subsequent calls attach that cooki
 
 ## How this was built
 
-This flow was developed collaboratively using [Claude Code](https://claude.ai/claude-code). The architecture, Hubitat API integration, retention policy, and poll loop behavior were iteratively designed and refined through a working session that included live testing against real hubs — including discovering that C-5 firmware downloads take 15–20 minutes before the hub reboots, which shaped the final poll loop design.
+**Built largely via AI — Anthropic's Claude (model: Claude Sonnet 4.6), working in
+[Claude Code](https://claude.ai/claude-code)** — with requirements, design direction,
+and live on-hub testing by tmichaeltx. The architecture, Hubitat API integration,
+retention policy, and poll loop behavior were iteratively designed and refined
+through working sessions against real hubs — including discovering that C-5 firmware
+downloads take 15–20 minutes before the hub reboots, which shaped the final poll
+loop design. (This attribution section was updated by Claude Fable 5.)
 
 ---
 
